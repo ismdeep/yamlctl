@@ -11,6 +11,11 @@ build:
 	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -o build/yamlctl_darwin_amd64 -trimpath -ldflags '-s -w' .
 	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o build/yamlctl_darwin_arm64 -trimpath -ldflags '-s -w' .
 
+# `make test`
+.PHONY: test
+test:
+	go test -count=1 ./...
+
 # `make clean`
 .PHONY: clean
 clean:
