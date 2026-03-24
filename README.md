@@ -87,7 +87,7 @@ app:
 - `set` updates only existing scalar values
 - `set` does not create missing keys
 - Quoted values keep their original quote style when updated
-- Plain scalar values may be automatically quoted when required to keep valid YAML
+- Plain scalar values are written back without automatically adding quotes
 - Block scalars such as `|` and `>` are not supported for in-place updates
 
 ## Limitations

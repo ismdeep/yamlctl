@@ -187,36 +187,6 @@ func renderScalar(value string, style yaml.Style) []byte {
 	case style&yaml.DoubleQuotedStyle != 0:
 		return []byte(strconv.Quote(value))
 	default:
-		if canUsePlainScalar(value) {
-			return []byte(value)
-		}
-		return []byte(strconv.Quote(value))
+		return []byte(value)
 	}
-}
-
-func canUsePlainScalar(value string) bool {
-	if value == "" {
-		return false
-	}
-	if strings.ContainsAny(value, "\r\n\t") {
-		return false
-	}
-	if strings.TrimSpace(value) != value {
-		return false
-	}
-	if strings.Contains(value, ": ") || strings.Contains(value, " #") {
-		return false
-	}
-
-	switch value[0] {
-	case '-', '?', ':', ',', '[', ']', '{', '}', '#', '&', '*', '!', '|', '>', '\'', '"', '@', '`':
-		return false
-	}
-
-	switch strings.ToLower(value) {
-	case "~", "null", "true", "false", "yes", "no", "on", "off":
-		return false
-	}
-
-	return true
 }
