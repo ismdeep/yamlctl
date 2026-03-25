@@ -9,7 +9,7 @@ It is useful when you want to automate small YAML edits without rewriting the wh
 - Read a scalar value from a YAML file with `get`
 - Update a scalar value in place with `set`
 - Preserve nearby comments, spacing, and quoted scalar style when possible
-- Keep the CLI simple with dot-separated paths such as `root.child`
+- Keep the CLI simple with paths such as `root.child` and `items[0].name`
 
 ## Installation
 
@@ -78,8 +78,8 @@ app:
 ## Path Syntax
 
 - Paths use dot-separated keys, for example `root.child.value`
-- The current implementation supports mapping traversal only
-- Array indexing is not supported
+- Array items use bracket indices, for example `items[0].name`
+- Nested arrays are supported, for example `matrix[1][2]`
 
 ## Behavior Notes
 
