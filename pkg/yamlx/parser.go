@@ -59,7 +59,13 @@ func SaveScalar(path string, node *yaml.Node) error {
 		return err
 	}
 
-	replacement := renderScalar(node.Value, node.Style)
+	replacement, err := renderScalar(node.Value, node.Style)
+	if err != nil {
+		return err
+	}
+	if needsSpaceBeforeInsertedScalar(data, start, node.Style) && len(replacement) > 0 {
+		replacement = append([]byte{' '}, replacement...)
+	}
 	out := append([]byte{}, data[:start]...)
 	out = append(out, replacement...)
 	out = append(out, data[end:]...)
@@ -180,13 +186,49 @@ func plainScalarEndOffset(data []byte, start int) int {
 	return end
 }
 
-func renderScalar(value string, style yaml.Style) []byte {
+func needsSpaceBeforeInsertedScalar(data []byte, start int, style yaml.Style) bool {
+	if style&(yaml.SingleQuotedStyle|yaml.DoubleQuotedStyle) != 0 {
+		return false
+	}
+	return start > 0 && data[start-1] == ':'
+}
+
+func renderScalar(value string, style yaml.Style) ([]byte, error) {
 	switch {
 	case style&yaml.SingleQuotedStyle != 0:
-		return []byte("'" + strings.ReplaceAll(value, "'", "''") + "'")
+		return []byte("'" + strings.ReplaceAll(value, "'", "''") + "'"), nil
 	case style&yaml.DoubleQuotedStyle != 0:
-		return []byte(strconv.Quote(value))
+		return []byte(strconv.Quote(value)), nil
 	default:
-		return []byte(value)
+		if !isSafePlainScalar(value) {
+			return nil, fmt.Errorf("plain scalar value contains characters that require quoting")
+		}
+		return []byte(value), nil
 	}
+}
+
+func isSafePlainScalar(value string) bool {
+	if strings.ContainsAny(value, "\r\n\x00") {
+		return false
+	}
+	if strings.TrimSpace(value) != value {
+		return false
+	}
+	if value == "" {
+		return true
+	}
+	if strings.HasPrefix(value, "#") || strings.Contains(value, " #") || strings.Contains(value, "\t#") {
+		return false
+	}
+	if strings.HasPrefix(value, "- ") || strings.HasPrefix(value, "? ") || strings.HasPrefix(value, ": ") {
+		return false
+	}
+	if strings.Contains(value, ": ") || strings.HasSuffix(value, ":") {
+		return false
+	}
+	switch value[0] {
+	case '{', '}', '[', ']', ',', '&', '*', '!', '|', '>', '\'', '"', '%', '@', '`':
+		return false
+	}
+	return true
 }

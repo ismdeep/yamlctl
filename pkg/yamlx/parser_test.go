@@ -170,3 +170,104 @@ func TestSaveScalarUpdatesArrayItem(t *testing.T) {
 		t.Fatalf("unexpected yaml after update:\n--- got ---\n%s\n--- want ---\n%s", got, expected)
 	}
 }
+
+func TestSaveScalarUpdatesEmptyPlainScalarWithValidYAML(t *testing.T) {
+	t.Parallel()
+
+	const original = "root:\n  child:\n  sibling: keep\n"
+	const expected = "root:\n  child: new\n  sibling: keep\n"
+
+	path := filepath.Join(t.TempDir(), "test.yaml")
+	if err := os.WriteFile(path, []byte(original), 0644); err != nil {
+		t.Fatalf("write test yaml: %v", err)
+	}
+
+	root, err := Load(path)
+	if err != nil {
+		t.Fatalf("load yaml: %v", err)
+	}
+
+	target, err := Set(root, "root.child", "new")
+	if err != nil {
+		t.Fatalf("set yaml value: %v", err)
+	}
+
+	if err := SaveScalar(path, target); err != nil {
+		t.Fatalf("save yaml value: %v", err)
+	}
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read updated yaml: %v", err)
+	}
+
+	if string(got) != expected {
+		t.Fatalf("unexpected yaml after update:\n--- got ---\n%s\n--- want ---\n%s", got, expected)
+	}
+
+	reloaded, err := Load(path)
+	if err != nil {
+		t.Fatalf("updated yaml should remain parseable: %v", err)
+	}
+
+	gotValue, err := Get(reloaded, "root.child")
+	if err != nil {
+		t.Fatalf("get updated yaml value: %v", err)
+	}
+	if gotValue != "new" {
+		t.Fatalf("unexpected updated value: got %q want %q", gotValue, "new")
+	}
+}
+
+func TestSaveScalarRejectsUnsafePlainScalarValue(t *testing.T) {
+	t.Parallel()
+
+	const original = "root:\n  child: old\n  sibling: keep\n"
+
+	path := filepath.Join(t.TempDir(), "test.yaml")
+	if err := os.WriteFile(path, []byte(original), 0644); err != nil {
+		t.Fatalf("write test yaml: %v", err)
+	}
+
+	root, err := Load(path)
+	if err != nil {
+		t.Fatalf("load yaml: %v", err)
+	}
+
+	target, err := Set(root, "root.child", "new\ninjected: yep")
+	if err != nil {
+		t.Fatalf("set yaml value: %v", err)
+	}
+
+	if err := SaveScalar(path, target); err == nil {
+		t.Fatal("expected unsafe plain scalar value to be rejected")
+	}
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read yaml after rejected update: %v", err)
+	}
+	if string(got) != original {
+		t.Fatalf("yaml changed after rejected update:\n--- got ---\n%s\n--- want ---\n%s", got, original)
+	}
+}
+
+func TestGetRejectsPathMissingDotAfterArrayIndex(t *testing.T) {
+	t.Parallel()
+
+	const original = "items:\n  - name: first\n"
+
+	path := filepath.Join(t.TempDir(), "test.yaml")
+	if err := os.WriteFile(path, []byte(original), 0644); err != nil {
+		t.Fatalf("write test yaml: %v", err)
+	}
+
+	root, err := Load(path)
+	if err != nil {
+		t.Fatalf("load yaml: %v", err)
+	}
+
+	if _, err := Get(root, "items[0]name"); err == nil {
+		t.Fatal("expected path missing dot after array index to be rejected")
+	}
+}

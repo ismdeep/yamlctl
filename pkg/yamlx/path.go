@@ -76,6 +76,9 @@ func parsePath(path string) ([]pathSegment, error) {
 			}
 			segments = append(segments, pathSegment{index: intPtr(index)})
 			part = part[bracket+end+1:]
+			if part != "" && part[0] != '[' {
+				return nil, fmt.Errorf("invalid path")
+			}
 		}
 	}
 
